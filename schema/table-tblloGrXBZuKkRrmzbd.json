@@ -1,0 +1,24 @@
+{
+  "id": "tblloGrXBZuKkRrmzbd",
+  "name": "Users",
+  "description": null,
+  "dbTableName": "\"bseOuq0sN9EHCcvwNc6\".\"tblloGrXBZuKkRrmzbd\"",
+  "fields": [
+    {
+      "id": "fld1Ksx6oehEUrvgu7h",
+      "name": "Email",
+      "dbFieldName": "Email",
+      "type": "singleLineText",
+      "description": null,
+      "options": {
+        "showAs": {
+          "type": "email"
+        }
+      },
+      "cellValueType": "string",
+      "isLookup": null,
+      "isComputed": null,
+      "isMultipleCellValue": false
+    }
+  ]
+}

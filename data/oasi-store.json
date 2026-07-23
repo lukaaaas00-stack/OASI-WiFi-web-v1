@@ -1,0 +1,12 @@
+{
+  "schedules": [],
+  "updatedAt": "2026-07-22T22:38:13.367Z",
+  "deviceStatus": {
+    "deviceId": "OASI-ESP32",
+    "online": true,
+    "updatedAt": "2026-07-22T23:35:04.287Z",
+    "currentTime": "20:35:01",
+    "nextDose": "--:--",
+    "servoPosition": 0
+  }
+}
