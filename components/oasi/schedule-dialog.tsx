@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useEffect, useState, type FormEvent } from "react"
 import { CalendarDays, Check, Clock3, Pill, Save } from "lucide-react"
@@ -26,6 +26,9 @@ const EMPTY_DRAFT: ScheduleDraft = {
   days: [],
   active: true,
 }
+
+const HOURS = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, "0"))
+const MINUTES = Array.from({ length: 60 }, (_, i) => String(i).padStart(2, "0"))
 
 export function ScheduleDialog({
   open,
@@ -67,6 +70,16 @@ export function ScheduleDialog({
     setError("")
   }
 
+  function setHour(hour: string) {
+    const minute = draft.time.split(":")[1] ?? "00"
+    setDraft((current) => ({ ...current, time: `${hour}:${minute}` }))
+  }
+
+  function setMinute(minute: string) {
+    const hour = draft.time.split(":")[0] ?? "08"
+    setDraft((current) => ({ ...current, time: `${hour}:${minute}` }))
+  }
+
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (!draft.medicine.trim() || !draft.dose.trim() || !draft.time) {
@@ -83,6 +96,8 @@ export function ScheduleDialog({
       dose: draft.dose.trim(),
     })
   }
+
+  const [selectedHour, selectedMinute] = draft.time.split(":")
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -133,18 +148,39 @@ export function ScheduleDialog({
             </div>
 
             <div className="max-w-xs space-y-2">
-              <Label htmlFor="time" className="flex items-center gap-2 text-base font-semibold text-zinc-200">
+              <Label className="flex items-center gap-2 text-base font-semibold text-zinc-200">
                 <Clock3 className="size-5 text-teal-300" aria-hidden="true" />
                 Hora
               </Label>
-              <Input
-                id="time"
-                type="time"
-                value={draft.time}
-                onChange={(event) => setDraft((current) => ({ ...current, time: event.target.value }))}
-                required
-                className="h-12 border-zinc-700 bg-zinc-950 px-4 text-lg focus-visible:ring-4 focus-visible:ring-teal-700/25"
-              />
+              <div className="flex items-center gap-2">
+                <select
+                  aria-label="Hora"
+                  value={selectedHour}
+                  onChange={(event) => setHour(event.target.value)}
+                  required
+                  className="h-12 flex-1 rounded-md border border-zinc-700 bg-zinc-950 px-3 text-lg text-zinc-100 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-teal-700/25"
+                >
+                  {HOURS.map((hour) => (
+                    <option key={hour} value={hour}>
+                      {hour}
+                    </option>
+                  ))}
+                </select>
+                <span className="text-lg font-semibold text-zinc-400">:</span>
+                <select
+                  aria-label="Minuto"
+                  value={selectedMinute}
+                  onChange={(event) => setMinute(event.target.value)}
+                  required
+                  className="h-12 flex-1 rounded-md border border-zinc-700 bg-zinc-950 px-3 text-lg text-zinc-100 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-teal-700/25"
+                >
+                  {MINUTES.map((minute) => (
+                    <option key={minute} value={minute}>
+                      {minute}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
 
             <fieldset>
