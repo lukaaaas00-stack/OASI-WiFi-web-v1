@@ -1,6 +1,6 @@
 ﻿"use client"
 
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 
 type DraftSchedule = {
   medicine: string
@@ -33,13 +33,52 @@ export default function AgregarPorTextoPage() {
   const [error, setError] = useState("")
   const [saving, setSaving] = useState(false)
   const [savedMessage, setSavedMessage] = useState("")
+  const [listening, setListening] = useState(false)
+  const [micSupported, setMicSupported] = useState(true)
+
+  const recognitionRef = useRef<any>(null)
+
+  useEffect(() => {
+    const SpeechRecognitionClass =
+      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+    if (!SpeechRecognitionClass) {
+      setMicSupported(false)
+      return
+    }
+
+    const recognition = new SpeechRecognitionClass()
+    recognition.lang = "es-ES"
+    recognition.interimResults = false
+    recognition.maxAlternatives = 1
+
+    recognition.onresult = (event: any) => {
+      const transcript = event.results[0]?.[0]?.transcript ?? ""
+      setText((current) => (current.trim() ? `${current.trim()} ${transcript}` : transcript))
+    }
+    recognition.onerror = () => setListening(false)
+    recognition.onend = () => setListening(false)
+
+    recognitionRef.current = recognition
+  }, [])
+
+  function toggleListening() {
+    if (!recognitionRef.current) return
+    if (listening) {
+      recognitionRef.current.stop()
+      setListening(false)
+    } else {
+      setError("")
+      recognitionRef.current.start()
+      setListening(true)
+    }
+  }
 
   async function handleAnalyze() {
     setError("")
     setSavedMessage("")
     setDrafts([])
     if (!text.trim()) {
-      setError("Escribe primero una descripción del horario.")
+      setError("Escribe o dictá primero una descripción del horario.")
       return
     }
     setAnalyzing(true)
@@ -103,28 +142,69 @@ export default function AgregarPorTextoPage() {
 
   return (
     <div style={{ padding: 24, maxWidth: 480, margin: "0 auto", fontFamily: "sans-serif" }}>
-      <h1 style={{ fontSize: 20, marginBottom: 8 }}>Agregar horario por texto</h1>
+      <h1 style={{ fontSize: 20, marginBottom: 8 }}>Agregar horario por texto o voz</h1>
       <p style={{ fontSize: 14, color: "#555", marginBottom: 20 }}>
-        Describí con tus palabras uno o varios horarios. Por ejemplo: &quot;una alarma a las 2 de la tarde para
-        tomar Losartán, 1 comprimido&quot;, o &quot;dos alarmas: a las 8 de la mañana y a las 9 de la noche, para
-        Metformina 500mg&quot;.
+        Describí con tus palabras uno o varios horarios, escribiendo o tocando el micrófono. Por ejemplo:
+        &quot;una alarma a las 2 de la tarde para tomar Losartán, 1 comprimido&quot;.
       </p>
 
-      <textarea
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        placeholder="Escribí acá tu horario..."
-        rows={4}
-        style={{
-          width: "100%",
-          padding: 12,
-          borderRadius: 8,
-          border: "1px solid #ccc",
-          fontSize: 15,
-          marginBottom: 12,
-          resize: "vertical",
-        }}
-      />
+      <div style={{ position: "relative", marginBottom: 12 }}>
+        <textarea
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          placeholder="Escribí o tocá el micrófono para dictar..."
+          rows={4}
+          style={{
+            width: "100%",
+            padding: 12,
+            paddingRight: 56,
+            borderRadius: 8,
+            border: "1px solid #ccc",
+            fontSize: 15,
+            resize: "vertical",
+            boxSizing: "border-box",
+          }}
+        />
+        {micSupported && (
+          <button
+            onClick={toggleListening}
+            aria-label={listening ? "Detener dictado" : "Dictar por voz"}
+            title={listening ? "Detener dictado" : "Dictar por voz"}
+            style={{
+              position: "absolute",
+              right: 8,
+              bottom: 8,
+              width: 40,
+              height: 40,
+              borderRadius: "50%",
+              border: "none",
+              background: listening ? "#dc2626" : "#0f766e",
+              color: "#fff",
+              fontSize: 18,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              boxShadow: listening ? "0 0 0 6px rgba(220,38,38,0.2)" : "none",
+              transition: "box-shadow 0.2s",
+            }}
+          >
+            {listening ? "⏹" : "🎤"}
+          </button>
+        )}
+      </div>
+
+      {listening && (
+        <p style={{ fontSize: 13, color: "#0f766e", marginBottom: 12 }} role="status">
+          Escuchando... tocá el botón de nuevo cuando termines.
+        </p>
+      )}
+
+      {!micSupported && (
+        <p style={{ fontSize: 13, color: "#888", marginBottom: 12 }}>
+          El dictado por voz no está disponible en este navegador — podés escribir en el cuadro de texto igual.
+        </p>
+      )}
 
       <button
         onClick={handleAnalyze}
@@ -176,20 +256,20 @@ export default function AgregarPorTextoPage() {
                 value={draft.medicine}
                 onChange={(e) => updateDraft(index, "medicine", e.target.value)}
                 placeholder="Medicamento"
-                style={{ width: "100%", padding: 8, marginBottom: 6, borderRadius: 6, border: "1px solid #ccc" }}
+                style={{ width: "100%", padding: 8, marginBottom: 6, borderRadius: 6, border: "1px solid #ccc", boxSizing: "border-box" }}
               />
               <input
                 type="text"
                 value={draft.dose}
                 onChange={(e) => updateDraft(index, "dose", e.target.value)}
                 placeholder="Dosis"
-                style={{ width: "100%", padding: 8, marginBottom: 6, borderRadius: 6, border: "1px solid #ccc" }}
+                style={{ width: "100%", padding: 8, marginBottom: 6, borderRadius: 6, border: "1px solid #ccc", boxSizing: "border-box" }}
               />
               <input
                 type="time"
                 value={draft.time}
                 onChange={(e) => updateDraft(index, "time", e.target.value)}
-                style={{ width: "100%", padding: 8, marginBottom: 6, borderRadius: 6, border: "1px solid #ccc" }}
+                style={{ width: "100%", padding: 8, marginBottom: 6, borderRadius: 6, border: "1px solid #ccc", boxSizing: "border-box" }}
               />
               <p style={{ fontSize: 12, color: "#666", marginBottom: 6 }}>
                 Días: {draft.days.map((d) => DAY_LABELS[d] ?? d).join(", ")}

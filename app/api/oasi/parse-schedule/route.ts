@@ -15,7 +15,7 @@ Reglas:
 - "active" siempre true.
 - Si el texto no tiene información suficiente para armar ni un horario (no dice hora, ni medicamento), devolvé una lista vacía.
 
-Respondé SOLO con JSON válido, sin texto antes ni después, sin backticks de markdown, con esta forma exacta:
+Respondé SOLO con JSON válido, con esta forma exacta:
 {"schedules":[{"medicine":"...","dose":"...","time":"HH:MM","days":["..."],"active":true}]}`
 
 export async function POST(request: Request) {
@@ -25,40 +25,37 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Escribe una descripción del horario." }, { status: 400 })
   }
 
-  const apiKey = process.env.ANTHROPIC_API_KEY
+  const apiKey = process.env.GEMINI_API_KEY
   if (!apiKey) {
-    return NextResponse.json({ error: "Falta configurar ANTHROPIC_API_KEY en el servidor." }, { status: 500 })
+    return NextResponse.json({ error: "Falta configurar GEMINI_API_KEY en el servidor." }, { status: 500 })
   }
 
   try {
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify({
-        model: "claude-haiku-4-5-20251001",
-        max_tokens: 1024,
-        system: SYSTEM_PROMPT,
-        messages: [{ role: "user", content: text }],
-      }),
-    })
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text }] }],
+          systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
+          generationConfig: { responseMimeType: "application/json" },
+        }),
+      }
+    )
 
     if (!response.ok) {
       const detail = await response.text()
-      console.error("Error de la API de Anthropic:", detail)
+      console.error("Error de la API de Gemini:", detail)
       return NextResponse.json({ error: "No se pudo analizar el texto en este momento." }, { status: 502 })
     }
 
     const data = await response.json()
-    const rawText = data.content?.find((block: { type: string }) => block.type === "text")?.text ?? "{}"
-    const cleaned = rawText.replace(/```json|```/g, "").trim()
+    const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text ?? "{}"
 
     let parsed: { schedules?: unknown[] }
     try {
-      parsed = JSON.parse(cleaned)
+      parsed = JSON.parse(rawText)
     } catch {
       return NextResponse.json({ error: "No se entendió el texto. Probá describirlo de otra forma." }, { status: 422 })
     }
@@ -79,7 +76,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ schedules })
   } catch (error) {
-    console.error("Error al llamar a la API de Anthropic:", error)
+    console.error("Error al llamar a la API de Gemini:", error)
     return NextResponse.json({ error: "No se pudo analizar el texto en este momento." }, { status: 502 })
   }
 }
