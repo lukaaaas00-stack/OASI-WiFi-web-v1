@@ -9,6 +9,7 @@ import {
   Clock3,
   Home,
   LoaderCircle,
+  Mic,
   Pencil,
   Pill,
   Plus,
@@ -35,6 +36,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
 import { ScheduleDialog } from "@/components/oasi/schedule-dialog"
+import { AddByVoice } from "@/components/oasi/add-by-voice"
 import {
   EXAMPLE_SCHEDULES,
   formatDays,
@@ -47,7 +49,7 @@ import { getDeviceStatus, loadSchedulesFromServer, saveSchedulesToServer } from 
 
 const STORAGE_KEY = "oasi-medication-schedules-v1"
 
-type View = "home" | "schedules" | "connection"
+type View = "home" | "schedules" | "add-voice" | "connection"
 type ConnectionMode = "real" | "demo"
 type ConnectionStatus = "disconnected" | "searching" | "connecting" | "connected" | "error"
 type SyncStatus = "idle" | "syncing" | "success" | "error"
@@ -56,6 +58,7 @@ type ScheduleDraft = Omit<MedicationSchedule, "id">
 const NAV_ITEMS: Array<{ id: View; label: string; icon: LucideIcon }> = [
   { id: "home", label: "Inicio", icon: Home },
   { id: "schedules", label: "Horarios", icon: CalendarClock },
+  { id: "add-voice", label: "Por voz", icon: Mic },
   { id: "connection", label: "Conexión", icon: Wifi },
 ]
 
@@ -97,7 +100,7 @@ function ConnectionPill({
 }) {
   if (status === "connected" && mode === "demo") {
     return (
-      <Badge className="gap-2 rounded-md border border-amber-800 bg-amber-950/40 px-3 py-2 text-sm font-semibold text-amber-100 hover:bg-amber-950/40">
+      <Badge className="gap-2 rounded-full border border-accent/30 bg-accent/10 px-3 py-2 text-sm font-semibold text-accent hover:bg-accent/10">
         <ShieldCheck className="size-4" aria-hidden="true" />
         Modo demo activo
       </Badge>
@@ -106,7 +109,7 @@ function ConnectionPill({
 
   if (status === "connected") {
     return (
-      <Badge className="gap-2 rounded-md border border-emerald-800 bg-emerald-950/50 px-3 py-2 text-sm font-semibold text-emerald-200 hover:bg-emerald-950/50">
+      <Badge className="gap-2 rounded-full border border-[#C4D2AE] bg-[#E4EAD9] px-3 py-2 text-sm font-semibold text-[#33502F] hover:bg-[#E4EAD9]">
         <Wifi className="size-4" aria-hidden="true" />
         {deviceName || "Conectado"}
       </Badge>
@@ -114,7 +117,7 @@ function ConnectionPill({
   }
 
   return (
-    <Badge variant="outline" className="gap-2 rounded-md border-zinc-700 bg-zinc-950 px-3 py-2 text-sm font-semibold text-zinc-300">
+    <Badge variant="outline" className="gap-2 rounded-full border-border bg-secondary px-3 py-2 text-sm font-semibold text-muted-foreground">
       <WifiOff className="size-4" aria-hidden="true" />
       Desconectado
     </Badge>
@@ -133,47 +136,54 @@ function ScheduleItem({
   onToggle: (active: boolean) => void
 }) {
   return (
-    <article className={`rounded-lg border bg-zinc-950 p-4 shadow-sm sm:p-5 ${schedule.active ? "border-zinc-800" : "border-zinc-800 opacity-70"}`}>
+    <article className={`rounded-xl border bg-card p-4 shadow-sm sm:p-5 ${schedule.active ? "border-border" : "border-dashed border-border opacity-70"}`}>
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
         <div className="flex min-w-24 items-center gap-3 sm:block">
-          <p className="text-3xl font-bold tabular-nums text-white sm:text-2xl">{schedule.time}</p>
+          <div
+            className={`flex size-16 shrink-0 flex-col items-center justify-center rounded-full border-2 ${
+              schedule.active ? "border-primary/30 bg-primary/5 text-primary" : "border-dashed border-border bg-secondary text-muted-foreground"
+            }`}
+            aria-hidden="true"
+          >
+            <span className="font-mono text-base font-semibold tabular-nums">{schedule.time}</span>
+          </div>
           <Badge
             variant="outline"
-            className={`mt-0 rounded-md px-2 py-1 text-xs sm:mt-2 ${
+            className={`mt-0 rounded-full px-2 py-1 text-xs sm:mt-2 ${
               schedule.active
-                ? "border-emerald-800 bg-emerald-950/50 text-emerald-200"
-                : "border-zinc-700 bg-zinc-900 text-zinc-300"
+                ? "border-[#C4D2AE] bg-[#E4EAD9] text-[#33502F]"
+                : "border-border bg-secondary text-muted-foreground"
             }`}
           >
             {schedule.active ? "Activo" : "Pausado"}
           </Badge>
         </div>
 
-        <div className="min-w-0 flex-1 border-zinc-800 sm:border-l sm:pl-5">
-          <h3 className="break-words text-lg font-semibold text-white">{schedule.medicine}</h3>
-          <p className="mt-1 break-words text-base text-zinc-300">{schedule.dose}</p>
-          <p className="mt-2 flex items-center gap-2 text-sm font-medium text-zinc-400">
+        <div className="min-w-0 flex-1 border-border sm:border-l sm:pl-5">
+          <h3 className="break-words text-lg font-semibold text-foreground">{schedule.medicine}</h3>
+          <p className="mt-1 break-words text-base text-muted-foreground">{schedule.dose}</p>
+          <p className="mt-2 flex items-center gap-2 text-sm font-medium text-muted-foreground">
             <CalendarClock className="size-4 shrink-0" aria-hidden="true" />
             {formatDays(schedule.days)}
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2 border-t border-zinc-800 pt-4 sm:border-0 sm:pt-0">
+        <div className="flex flex-wrap items-center gap-2 border-t border-border pt-4 sm:border-0 sm:pt-0">
           <div className="mr-auto flex min-h-11 items-center gap-3 sm:mr-2">
             <Switch
               checked={schedule.active}
               onCheckedChange={onToggle}
               aria-label={`${schedule.active ? "Pausar" : "Activar"} ${schedule.medicine}`}
-              className="data-[state=checked]:bg-teal-700"
+              className="data-[state=checked]:bg-primary"
             />
-            <span className="text-sm font-medium text-zinc-300 sm:hidden">
+            <span className="text-sm font-medium text-muted-foreground sm:hidden">
               {schedule.active ? "Activo" : "Pausado"}
             </span>
           </div>
           <Button
             variant="outline"
             onClick={onEdit}
-            className="h-11 border-zinc-700 px-3 text-zinc-200 focus-visible:ring-4 focus-visible:ring-teal-700/25"
+            className="h-11 border-border px-3 text-foreground focus-visible:ring-4 focus-visible:ring-primary/25"
           >
             <Pencil className="size-4" aria-hidden="true" />
             Editar
@@ -181,7 +191,7 @@ function ScheduleItem({
           <Button
             variant="outline"
             onClick={onDelete}
-            className="h-11 border-red-900 px-3 text-red-400 hover:bg-red-950/50 hover:text-red-300 focus-visible:ring-4 focus-visible:ring-red-700/25"
+            className="h-11 border-destructive/40 px-3 text-destructive hover:bg-destructive/10 hover:text-destructive focus-visible:ring-4 focus-visible:ring-destructive/25"
           >
             <Trash2 className="size-4" aria-hidden="true" />
             Eliminar
@@ -194,15 +204,15 @@ function ScheduleItem({
 
 function TodayItem({ schedule }: { schedule: MedicationSchedule }) {
   return (
-    <article className="flex items-center gap-4 rounded-lg border border-zinc-800 bg-zinc-950 p-4 shadow-sm">
-      <div className="flex size-14 shrink-0 items-center justify-center rounded-md bg-teal-950/50 text-xl font-bold tabular-nums text-teal-200">
+    <article className="flex items-center gap-4 rounded-xl border border-border bg-card p-4 shadow-sm">
+      <div className="flex size-14 shrink-0 items-center justify-center rounded-full border-2 border-primary/30 bg-primary/5 font-mono text-lg font-semibold tabular-nums text-primary">
         {schedule.time}
       </div>
       <div className="min-w-0 flex-1">
-        <h3 className="break-words text-lg font-semibold text-white">{schedule.medicine}</h3>
-        <p className="break-words text-base text-zinc-400">{schedule.dose}</p>
+        <h3 className="break-words text-lg font-semibold text-foreground">{schedule.medicine}</h3>
+        <p className="break-words text-base text-muted-foreground">{schedule.dose}</p>
       </div>
-      <CheckCircle2 className="hidden size-6 shrink-0 text-emerald-400 sm:block" aria-label="Horario activo" />
+      <CheckCircle2 className="hidden size-6 shrink-0 text-[#4A6E44] sm:block" aria-label="Horario activo" />
     </article>
   )
 }
@@ -389,17 +399,17 @@ export default function OasiApp({ userMenu }: { userMenu: ReactNode }) {
     return (
       <div className="space-y-8">
         <section aria-labelledby="home-title">
-          <p className="text-sm font-semibold uppercase text-teal-300">Panel principal</p>
+          <p className="text-sm font-semibold uppercase tracking-wide text-accent">Panel principal</p>
           <div className="mt-1 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
             <div>
-              <h1 id="home-title" className="text-3xl font-bold text-white sm:text-4xl">Inicio</h1>
-              <p className="mt-2 text-base text-zinc-400">
+              <h1 id="home-title" className="text-3xl font-bold text-foreground sm:text-4xl">Inicio</h1>
+              <p className="mt-2 text-base text-muted-foreground">
                 {now.toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" })}
               </p>
             </div>
             <Button
               onClick={openNewSchedule}
-              className="h-12 justify-center bg-teal-800 px-5 text-base text-white hover:bg-teal-900 focus-visible:ring-4 focus-visible:ring-teal-700/30"
+              className="h-12 justify-center bg-primary px-5 text-base text-primary-foreground hover:bg-primary/90 focus-visible:ring-4 focus-visible:ring-primary/30"
             >
               <Plus className="size-5" aria-hidden="true" />
               Agregar horario
@@ -408,12 +418,12 @@ export default function OasiApp({ userMenu }: { userMenu: ReactNode }) {
         </section>
 
         <section className="grid gap-4 lg:grid-cols-5" aria-label="Resumen del día">
-          <article className="rounded-lg border border-zinc-800 bg-zinc-950 p-5 shadow-sm lg:col-span-2">
+          <article className="rounded-xl border border-border bg-card p-5 shadow-sm lg:col-span-2">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="text-sm font-semibold uppercase text-zinc-400">Dispensador</p>
-                <h2 className="mt-2 text-xl font-semibold text-white">{connectionLabel}</h2>
-                <p className="mt-2 text-base text-zinc-400">
+                <p className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Dispensador</p>
+                <h2 className="mt-2 text-xl font-semibold text-foreground">{connectionLabel}</h2>
+                <p className="mt-2 text-base text-muted-foreground">
                   {connectionStatus === "connected"
                     ? connectionMode === "demo"
                       ? "Prueba sin hardware real"
@@ -422,12 +432,12 @@ export default function OasiApp({ userMenu }: { userMenu: ReactNode }) {
                 </p>
               </div>
               <div
-                className={`flex size-12 shrink-0 items-center justify-center rounded-md ${
+                className={`flex size-12 shrink-0 items-center justify-center rounded-full ${
                   connectionStatus === "connected"
                     ? connectionMode === "demo"
-                      ? "bg-amber-950 text-amber-200"
-                      : "bg-emerald-950 text-emerald-300"
-                    : "bg-zinc-900 text-zinc-400"
+                      ? "bg-accent/10 text-accent"
+                      : "bg-[#E4EAD9] text-[#33502F]"
+                    : "bg-secondary text-muted-foreground"
                 }`}
               >
                 {connectionStatus === "connected" ? (
@@ -440,22 +450,22 @@ export default function OasiApp({ userMenu }: { userMenu: ReactNode }) {
             <Button
               variant="outline"
               onClick={() => setView("connection")}
-              className="mt-6 h-11 w-full border-zinc-700 text-base text-zinc-200 focus-visible:ring-4 focus-visible:ring-teal-700/25"
+              className="mt-6 h-11 w-full border-border text-base text-foreground focus-visible:ring-4 focus-visible:ring-primary/25"
             >
               <Wifi className="size-5" aria-hidden="true" />
               {connectionStatus === "connected" ? "Ver conexión" : "Conectar dispensador"}
             </Button>
           </article>
 
-          <article className="rounded-lg border border-teal-900 bg-zinc-950 p-5 text-white shadow-sm lg:col-span-3">
+          <article className="relative overflow-hidden rounded-xl border border-primary/20 bg-primary p-5 text-primary-foreground shadow-sm lg:col-span-3">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="text-sm font-semibold uppercase text-teal-200">Próxima toma</p>
+                <p className="text-sm font-semibold uppercase tracking-wide text-primary-foreground/70">Próxima toma</p>
                 {nextDose ? (
                   <>
                     <p className="mt-3 text-2xl font-bold sm:text-3xl">{nextDose.schedule.medicine}</p>
-                    <p className="mt-2 text-lg text-teal-50">{nextDose.schedule.dose}</p>
-                    <p className="mt-5 flex items-center gap-2 text-xl font-semibold text-white">
+                    <p className="mt-2 text-lg text-primary-foreground/85">{nextDose.schedule.dose}</p>
+                    <p className="mt-5 flex items-center gap-2 font-mono text-xl font-semibold tabular-nums">
                       <Clock3 className="size-6" aria-hidden="true" />
                       {formatNextDate(nextDose.date, now)}
                     </p>
@@ -463,11 +473,11 @@ export default function OasiApp({ userMenu }: { userMenu: ReactNode }) {
                 ) : (
                   <>
                     <p className="mt-3 text-2xl font-bold">No hay próximas tomas</p>
-                    <p className="mt-2 text-base text-teal-100">Agrega o activa un horario para verlo aquí.</p>
+                    <p className="mt-2 text-base text-primary-foreground/80">Agrega o activa un horario para verlo aquí.</p>
                   </>
                 )}
               </div>
-              <div className="flex size-12 shrink-0 items-center justify-center rounded-md bg-zinc-800">
+              <div className="flex size-12 shrink-0 items-center justify-center rounded-full bg-primary-foreground/10">
                 <Pill className="size-7" aria-hidden="true" />
               </div>
             </div>
@@ -477,12 +487,12 @@ export default function OasiApp({ userMenu }: { userMenu: ReactNode }) {
         <section aria-labelledby="today-title">
           <div className="mb-4 flex items-center justify-between gap-4">
             <div>
-              <h2 id="today-title" className="text-2xl font-bold text-white">Tomas de hoy</h2>
-              <p className="mt-1 text-base text-zinc-400">
+              <h2 id="today-title" className="text-2xl font-bold text-foreground">Tomas de hoy</h2>
+              <p className="mt-1 text-base text-muted-foreground">
                 {todaySchedules.length === 1 ? "1 horario activo" : `${todaySchedules.length} horarios activos`}
               </p>
             </div>
-            <Button variant="ghost" onClick={() => setView("schedules")} className="h-11 text-base font-semibold text-teal-300 hover:bg-teal-950/50 hover:text-teal-200">
+            <Button variant="ghost" onClick={() => setView("schedules")} className="h-11 text-base font-semibold text-primary hover:bg-primary/10 hover:text-primary">
               Ver horarios
             </Button>
           </div>
@@ -492,13 +502,13 @@ export default function OasiApp({ userMenu }: { userMenu: ReactNode }) {
               {todaySchedules.map((schedule) => <TodayItem key={schedule.id} schedule={schedule} />)}
             </div>
           ) : storageReady ? (
-            <div className="rounded-lg border border-dashed border-zinc-700 bg-zinc-950 px-6 py-10 text-center">
-              <CalendarClock className="mx-auto size-8 text-zinc-400" aria-hidden="true" />
-              <h3 className="mt-3 text-lg font-semibold text-zinc-100">No hay tomas para hoy</h3>
-              <p className="mt-1 text-base text-zinc-400">Puedes revisar los horarios o agregar uno nuevo.</p>
+            <div className="rounded-xl border border-dashed border-border bg-card px-6 py-10 text-center">
+              <CalendarClock className="mx-auto size-8 text-muted-foreground" aria-hidden="true" />
+              <h3 className="mt-3 text-lg font-semibold text-foreground">No hay tomas para hoy</h3>
+              <p className="mt-1 text-base text-muted-foreground">Puedes revisar los horarios o agregar uno nuevo.</p>
             </div>
           ) : (
-            <div className="h-28 animate-pulse rounded-lg bg-zinc-800" aria-label="Cargando horarios" />
+            <div className="h-28 animate-pulse rounded-xl bg-secondary" aria-label="Cargando horarios" />
           )}
         </section>
       </div>
@@ -510,15 +520,15 @@ export default function OasiApp({ userMenu }: { userMenu: ReactNode }) {
       <div className="space-y-6">
         <section className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end" aria-labelledby="schedules-title">
           <div>
-            <p className="text-sm font-semibold uppercase text-teal-300">Medicación</p>
-            <h1 id="schedules-title" className="mt-1 text-3xl font-bold text-white sm:text-4xl">Horarios</h1>
-            <p className="mt-2 text-base text-zinc-400">
+            <p className="text-sm font-semibold uppercase tracking-wide text-accent">Medicación</p>
+            <h1 id="schedules-title" className="mt-1 text-3xl font-bold text-foreground sm:text-4xl">Horarios</h1>
+            <p className="mt-2 text-base text-muted-foreground">
               {schedules.length === 1 ? "1 horario guardado" : `${schedules.length} horarios guardados`}
             </p>
           </div>
           <Button
             onClick={openNewSchedule}
-            className="h-12 bg-teal-800 px-5 text-base text-white hover:bg-teal-900 focus-visible:ring-4 focus-visible:ring-teal-700/30"
+            className="h-12 bg-primary px-5 text-base text-primary-foreground hover:bg-primary/90 focus-visible:ring-4 focus-visible:ring-primary/30"
           >
             <CirclePlus className="size-5" aria-hidden="true" />
             Agregar horario
@@ -546,21 +556,21 @@ export default function OasiApp({ userMenu }: { userMenu: ReactNode }) {
             ))}
           </section>
         ) : storageReady ? (
-          <section className="rounded-lg border border-dashed border-zinc-700 bg-zinc-950 px-6 py-14 text-center" aria-label="Sin horarios">
-            <CalendarClock className="mx-auto size-10 text-zinc-400" aria-hidden="true" />
-            <h2 className="mt-4 text-xl font-semibold text-white">Todavía no hay horarios</h2>
-            <p className="mx-auto mt-2 max-w-md text-base text-zinc-400">
+          <section className="rounded-xl border border-dashed border-border bg-card px-6 py-14 text-center" aria-label="Sin horarios">
+            <CalendarClock className="mx-auto size-10 text-muted-foreground" aria-hidden="true" />
+            <h2 className="mt-4 text-xl font-semibold text-foreground">Todavía no hay horarios</h2>
+            <p className="mx-auto mt-2 max-w-md text-base text-muted-foreground">
               Agrega la primera medicación para preparar el dispensador.
             </p>
-            <Button onClick={openNewSchedule} className="mt-6 h-12 bg-teal-800 px-5 text-base text-white hover:bg-teal-900">
+            <Button onClick={openNewSchedule} className="mt-6 h-12 bg-primary px-5 text-base text-primary-foreground hover:bg-primary/90">
               <Plus className="size-5" aria-hidden="true" />
               Agregar primer horario
             </Button>
           </section>
         ) : (
           <div className="space-y-3" aria-label="Cargando horarios">
-            <div className="h-32 animate-pulse rounded-lg bg-zinc-800" />
-            <div className="h-32 animate-pulse rounded-lg bg-zinc-800" />
+            <div className="h-32 animate-pulse rounded-xl bg-secondary" />
+            <div className="h-32 animate-pulse rounded-xl bg-secondary" />
           </div>
         )}
       </div>
@@ -574,21 +584,21 @@ export default function OasiApp({ userMenu }: { userMenu: ReactNode }) {
     return (
       <div className="space-y-7">
         <section aria-labelledby="connection-title">
-          <p className="text-sm font-semibold uppercase text-teal-300">Dispositivo</p>
-          <h1 id="connection-title" className="mt-1 text-3xl font-bold text-white sm:text-4xl">Conexión</h1>
-          <p className="mt-2 text-base text-zinc-400">Gestiona el vínculo entre OASI y el dispensador ESP32.</p>
+          <p className="text-sm font-semibold uppercase tracking-wide text-accent">Dispositivo</p>
+          <h1 id="connection-title" className="mt-1 text-3xl font-bold text-foreground sm:text-4xl">Conexión</h1>
+          <p className="mt-2 text-base text-muted-foreground">Gestiona el vínculo entre OASI y el dispensador ESP32.</p>
         </section>
 
         <section aria-labelledby="mode-title">
-          <h2 id="mode-title" className="text-lg font-semibold text-white">Tipo de conexión</h2>
-          <div className="mt-3 inline-flex w-full rounded-lg border border-zinc-700 bg-zinc-950 p-1 sm:w-auto" role="radiogroup" aria-label="Tipo de conexión">
+          <h2 id="mode-title" className="text-lg font-semibold text-foreground">Tipo de conexión</h2>
+          <div className="mt-3 inline-flex w-full rounded-full border border-border bg-card p-1 sm:w-auto" role="radiogroup" aria-label="Tipo de conexión">
             <button
               type="button"
               role="radio"
               aria-checked={connectionMode === "real"}
               onClick={() => changeConnectionMode("real")}
-              className={`flex min-h-12 flex-1 items-center justify-center gap-2 rounded-md px-5 text-base font-semibold outline-none focus-visible:ring-4 focus-visible:ring-teal-700/30 sm:min-w-48 ${
-                connectionMode === "real" ? "bg-teal-800 text-white" : "text-zinc-300 hover:bg-zinc-900"
+              className={`flex min-h-12 flex-1 items-center justify-center gap-2 rounded-full px-5 text-base font-semibold outline-none focus-visible:ring-4 focus-visible:ring-primary/30 sm:min-w-48 ${
+                connectionMode === "real" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-secondary"
               }`}
             >
               <Wifi className="size-5" aria-hidden="true" />
@@ -599,8 +609,8 @@ export default function OasiApp({ userMenu }: { userMenu: ReactNode }) {
               role="radio"
               aria-checked={connectionMode === "demo"}
               onClick={() => changeConnectionMode("demo")}
-              className={`flex min-h-12 flex-1 items-center justify-center gap-2 rounded-md px-5 text-base font-semibold outline-none focus-visible:ring-4 focus-visible:ring-amber-700/30 sm:min-w-48 ${
-                connectionMode === "demo" ? "bg-amber-500 text-black" : "text-zinc-300 hover:bg-zinc-900"
+              className={`flex min-h-12 flex-1 items-center justify-center gap-2 rounded-full px-5 text-base font-semibold outline-none focus-visible:ring-4 focus-visible:ring-accent/30 sm:min-w-48 ${
+                connectionMode === "demo" ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-secondary"
               }`}
             >
               <ShieldCheck className="size-5" aria-hidden="true" />
@@ -610,27 +620,27 @@ export default function OasiApp({ userMenu }: { userMenu: ReactNode }) {
         </section>
 
         {connectionMode === "demo" ? (
-          <section className="flex gap-4 rounded-lg border border-amber-800 bg-amber-950/40 p-5" aria-label="Aviso de modo demostración">
-            <ShieldCheck className="mt-0.5 size-6 shrink-0 text-amber-300" aria-hidden="true" />
+          <section className="flex gap-4 rounded-xl border border-accent/30 bg-accent/10 p-5" aria-label="Aviso de modo demostración">
+            <ShieldCheck className="mt-0.5 size-6 shrink-0 text-accent" aria-hidden="true" />
             <div>
-              <h2 className="text-lg font-semibold text-amber-100">Estás en modo demostración</h2>
-              <p className="mt-1 text-base text-amber-200">Las acciones son simuladas. No hay ningún ESP32 conectado y no se envían datos por Wi-Fi.</p>
+              <h2 className="text-lg font-semibold text-accent">Estás en modo demostración</h2>
+              <p className="mt-1 text-base text-accent/90">Las acciones son simuladas. No hay ningún ESP32 conectado y no se envían datos por Wi-Fi.</p>
             </div>
           </section>
         ) : null}
 
-        <section className="rounded-lg border border-zinc-800 bg-zinc-950 p-5 shadow-sm sm:p-6" aria-labelledby="device-status-title">
+        <section className="rounded-xl border border-border bg-card p-5 shadow-sm sm:p-6" aria-labelledby="device-status-title">
           <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-start gap-4">
               <div
-                className={`flex size-12 shrink-0 items-center justify-center rounded-md ${
+                className={`flex size-12 shrink-0 items-center justify-center rounded-full ${
                   isConnected
                     ? connectionMode === "demo"
-                      ? "bg-amber-950 text-amber-200"
-                      : "bg-emerald-950 text-emerald-300"
+                      ? "bg-accent/10 text-accent"
+                      : "bg-[#E4EAD9] text-[#33502F]"
                     : connectionStatus === "error"
-                      ? "bg-red-950 text-red-300"
-                      : "bg-zinc-900 text-zinc-400"
+                      ? "bg-destructive/10 text-destructive"
+                      : "bg-secondary text-muted-foreground"
                 }`}
               >
                 {isBusy ? (
@@ -644,9 +654,9 @@ export default function OasiApp({ userMenu }: { userMenu: ReactNode }) {
                 )}
               </div>
               <div>
-                <p className="text-sm font-semibold uppercase text-zinc-400">Estado</p>
-                <h2 id="device-status-title" className="mt-1 text-xl font-semibold text-white" aria-live="polite">{connectionLabel}</h2>
-                <p className="mt-1 text-base text-zinc-400">
+                <p className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Estado</p>
+                <h2 id="device-status-title" className="mt-1 text-xl font-semibold text-foreground" aria-live="polite">{connectionLabel}</h2>
+                <p className="mt-1 text-base text-muted-foreground">
                   {deviceName || (connectionMode === "real" ? "Ningún dispositivo seleccionado" : "Simulador detenido")}
                 </p>
               </div>
@@ -656,7 +666,7 @@ export default function OasiApp({ userMenu }: { userMenu: ReactNode }) {
               <Button
                 variant="outline"
                 onClick={disconnectDevice}
-                className="h-12 border-zinc-700 px-5 text-base text-zinc-200 focus-visible:ring-4 focus-visible:ring-red-700/20"
+                className="h-12 border-border px-5 text-base text-foreground focus-visible:ring-4 focus-visible:ring-destructive/20"
               >
                 <WifiOff className="size-5" aria-hidden="true" />
                 {connectionMode === "demo" ? "Detener demo" : "Desconectar"}
@@ -665,7 +675,7 @@ export default function OasiApp({ userMenu }: { userMenu: ReactNode }) {
               <Button
                 onClick={connectRealDevice}
                 disabled={isBusy}
-                className="h-12 bg-teal-800 px-5 text-base text-white hover:bg-teal-900 focus-visible:ring-4 focus-visible:ring-teal-700/30 disabled:opacity-60"
+                className="h-12 bg-primary px-5 text-base text-primary-foreground hover:bg-primary/90 focus-visible:ring-4 focus-visible:ring-primary/30 disabled:opacity-60"
               >
                 {isBusy ? <LoaderCircle className="size-5 animate-spin" aria-hidden="true" /> : <Wifi className="size-5" aria-hidden="true" />}
                 {connectionStatus === "connecting" ? "Comprobando…" : "Comprobar ESP32"}
@@ -674,7 +684,7 @@ export default function OasiApp({ userMenu }: { userMenu: ReactNode }) {
               <Button
                 onClick={startDemo}
                 disabled={isBusy}
-                className="h-12 bg-amber-500 px-5 text-base font-semibold text-black hover:bg-amber-400 focus-visible:ring-4 focus-visible:ring-amber-700/30"
+                className="h-12 bg-accent px-5 text-base font-semibold text-accent-foreground hover:bg-accent/90 focus-visible:ring-4 focus-visible:ring-accent/30"
               >
                 {isBusy ? <LoaderCircle className="size-5 animate-spin" aria-hidden="true" /> : <ShieldCheck className="size-5" aria-hidden="true" />}
                 {isBusy ? "Iniciando…" : "Iniciar demostración"}
@@ -683,23 +693,23 @@ export default function OasiApp({ userMenu }: { userMenu: ReactNode }) {
           </div>
 
           {connectionError ? (
-            <div className="mt-5 flex gap-3 border-t border-red-900 pt-4 text-red-300" role="alert">
+            <div className="mt-5 flex gap-3 border-t border-destructive/30 pt-4 text-destructive" role="alert">
               <AlertCircle className="mt-0.5 size-5 shrink-0" aria-hidden="true" />
               <p className="text-base font-medium">{connectionError}</p>
             </div>
           ) : null}
         </section>
 
-        <section className="rounded-lg border border-zinc-800 bg-zinc-950 p-5 shadow-sm sm:p-6" aria-labelledby="sync-title">
+        <section className="rounded-xl border border-border bg-card p-5 shadow-sm sm:p-6" aria-labelledby="sync-title">
           <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-start gap-4">
               <div
-                className={`flex size-12 shrink-0 items-center justify-center rounded-md ${
+                className={`flex size-12 shrink-0 items-center justify-center rounded-full ${
                   syncStatus === "success"
-                    ? "bg-emerald-950 text-emerald-300"
+                    ? "bg-[#E4EAD9] text-[#33502F]"
                     : syncStatus === "error"
-                      ? "bg-red-950 text-red-300"
-                      : "bg-zinc-900 text-zinc-400"
+                      ? "bg-destructive/10 text-destructive"
+                      : "bg-secondary text-muted-foreground"
                 }`}
               >
                 {syncStatus === "syncing" ? (
@@ -713,13 +723,13 @@ export default function OasiApp({ userMenu }: { userMenu: ReactNode }) {
                 )}
               </div>
               <div>
-                <p className="text-sm font-semibold uppercase text-zinc-400">Horarios</p>
-                <h2 id="sync-title" className="mt-1 text-xl font-semibold text-white">Sincronización</h2>
-                <p className={`mt-1 text-base ${syncStatus === "error" ? "font-medium text-red-400" : "text-zinc-400"}`} aria-live="polite">
+                <p className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Horarios</p>
+                <h2 id="sync-title" className="mt-1 text-xl font-semibold text-foreground">Sincronización</h2>
+                <p className={`mt-1 text-base ${syncStatus === "error" ? "font-medium text-destructive" : "text-muted-foreground"}`} aria-live="polite">
                   {syncMessage}
                 </p>
                 {lastSync ? (
-                  <p className="mt-2 text-sm font-medium text-zinc-400">
+                  <p className="mt-2 text-sm font-medium text-muted-foreground">
                     Última sincronización: {lastSync.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" })}
                   </p>
                 ) : null}
@@ -729,7 +739,7 @@ export default function OasiApp({ userMenu }: { userMenu: ReactNode }) {
               variant="outline"
               onClick={() => void syncWithDevice()}
               disabled={!isConnected || syncStatus === "syncing"}
-              className="h-12 border-zinc-700 px-5 text-base text-zinc-200 focus-visible:ring-4 focus-visible:ring-teal-700/25 disabled:opacity-60"
+              className="h-12 border-border px-5 text-base text-foreground focus-visible:ring-4 focus-visible:ring-primary/25 disabled:opacity-60"
             >
               <RefreshCw className={`size-5 ${syncStatus === "syncing" ? "animate-spin" : ""}`} aria-hidden="true" />
               Sincronizar ahora
@@ -740,23 +750,39 @@ export default function OasiApp({ userMenu }: { userMenu: ReactNode }) {
     )
   }
 
+  function renderAddVoice() {
+    return (
+      <AddByVoice
+        onAdd={(drafts) => {
+          if (drafts.length === 0) return
+          const newSchedules = drafts.map((draft) => ({ ...draft, id: makeId() }))
+          updateSchedules(
+            [...schedules, ...newSchedules],
+            newSchedules.length === 1 ? "Horario agregado" : `${newSchedules.length} horarios agregados`
+          )
+          setView("schedules")
+        }}
+      />
+    )
+  }
+
   return (
-    <div className="min-h-dvh bg-black text-white">
+    <div className="min-h-dvh bg-background text-foreground">
       <a
         href="#main-content"
-        className="fixed left-4 top-3 z-50 -translate-y-24 rounded-md border border-zinc-700 bg-zinc-950 px-4 py-3 font-semibold text-white outline-none focus:translate-y-0 focus:ring-4 focus:ring-teal-300"
+        className="fixed left-4 top-3 z-50 -translate-y-24 rounded-md border border-border bg-card px-4 py-3 font-semibold text-foreground outline-none focus:translate-y-0 focus:ring-4 focus:ring-primary/30"
       >
         Ir al contenido principal
       </a>
 
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r border-zinc-800 bg-zinc-950 lg:flex">
-        <div className="flex h-20 items-center gap-3 border-b border-zinc-800 px-6">
-          <div className="flex size-11 items-center justify-center rounded-md bg-teal-800 text-white">
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r border-sidebar-border bg-sidebar lg:flex">
+        <div className="flex h-20 items-center gap-3 border-b border-sidebar-border px-6">
+          <div className="flex size-11 items-center justify-center rounded-full bg-primary text-primary-foreground">
             <Pill className="size-6" aria-hidden="true" />
           </div>
           <div>
-            <p className="text-2xl font-bold text-white">OASI</p>
-            <p className="text-xs font-semibold uppercase text-zinc-400">Medicación segura</p>
+            <p className="text-2xl font-bold text-sidebar-foreground">OASI</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Medicación segura</p>
           </div>
         </div>
 
@@ -769,32 +795,32 @@ export default function OasiApp({ userMenu }: { userMenu: ReactNode }) {
                 type="button"
                 onClick={() => setView(item.id)}
                 aria-current={view === item.id ? "page" : undefined}
-                className={`flex min-h-13 w-full items-center gap-3 rounded-md px-4 text-left text-base font-semibold outline-none transition-colors focus-visible:ring-4 focus-visible:ring-teal-700/25 ${
-                  view === item.id ? "bg-teal-950/50 text-teal-100" : "text-zinc-300 hover:bg-zinc-900"
+                className={`flex min-h-13 w-full items-center gap-3 rounded-lg px-4 text-left text-base font-semibold outline-none transition-colors focus-visible:ring-4 focus-visible:ring-primary/25 ${
+                  view === item.id ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-secondary"
                 }`}
               >
-                <Icon className={`size-5 ${view === item.id ? "text-teal-300" : "text-zinc-400"}`} aria-hidden="true" />
+                <Icon className={`size-5 ${view === item.id ? "text-primary" : "text-muted-foreground"}`} aria-hidden="true" />
                 {item.label}
               </button>
             )
           })}
         </nav>
 
-        <div className="border-t border-zinc-800 p-4">
+        <div className="border-t border-sidebar-border p-4">
           <ConnectionPill status={connectionStatus} mode={connectionMode} deviceName={deviceName} />
         </div>
       </aside>
 
       <div className="lg:pl-64">
-        <header className="sticky top-0 z-20 flex h-18 items-center justify-between border-b border-zinc-800 bg-black/95 px-4 backdrop-blur sm:px-6 lg:px-8">
+        <header className="sticky top-0 z-20 flex h-18 items-center justify-between border-b border-border bg-background/95 px-4 backdrop-blur sm:px-6 lg:px-8">
           <div className="flex items-center gap-3 lg:hidden">
-            <div className="flex size-10 items-center justify-center rounded-md bg-teal-800 text-white">
+            <div className="flex size-10 items-center justify-center rounded-full bg-primary text-primary-foreground">
               <Pill className="size-5" aria-hidden="true" />
             </div>
             <span className="hidden text-xl font-bold min-[380px]:inline">OASI</span>
           </div>
           <div className="hidden lg:block">
-            <p className="text-sm font-semibold text-zinc-400">Gestión del dispensador</p>
+            <p className="text-sm font-semibold text-muted-foreground">Gestión del dispensador</p>
           </div>
           <div className="flex items-center gap-2 sm:gap-3">
             <ConnectionPill status={connectionStatus} mode={connectionMode} deviceName={deviceName} />
@@ -803,11 +829,17 @@ export default function OasiApp({ userMenu }: { userMenu: ReactNode }) {
         </header>
 
         <main id="main-content" className="mx-auto max-w-6xl px-4 py-7 pb-28 sm:px-6 sm:py-9 lg:px-8 lg:pb-12">
-          {view === "home" ? renderHome() : view === "schedules" ? renderSchedules() : renderConnection()}
+          {view === "home"
+            ? renderHome()
+            : view === "schedules"
+              ? renderSchedules()
+              : view === "add-voice"
+                ? renderAddVoice()
+                : renderConnection()}
         </main>
       </div>
 
-      <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-3 border-t border-zinc-700 bg-zinc-950 px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-4px_18px_rgba(15,23,42,0.08)] lg:hidden" aria-label="Navegación principal">
+      <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-4 border-t border-border bg-card px-1 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-4px_18px_rgba(29,38,36,0.08)] lg:hidden" aria-label="Navegación principal">
         {NAV_ITEMS.map((item) => {
           const Icon = item.icon
           return (
@@ -816,8 +848,8 @@ export default function OasiApp({ userMenu }: { userMenu: ReactNode }) {
               type="button"
               onClick={() => setView(item.id)}
               aria-current={view === item.id ? "page" : undefined}
-              className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-md px-2 text-sm font-semibold outline-none focus-visible:ring-4 focus-visible:ring-teal-700/30 ${
-                view === item.id ? "bg-teal-950/50 text-teal-100" : "text-zinc-400"
+              className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-lg px-2 text-sm font-semibold outline-none focus-visible:ring-4 focus-visible:ring-primary/30 ${
+                view === item.id ? "bg-primary/10 text-primary" : "text-muted-foreground"
               }`}
             >
               <Icon className="size-5" aria-hidden="true" />
@@ -838,21 +870,21 @@ export default function OasiApp({ userMenu }: { userMenu: ReactNode }) {
       />
 
       <AlertDialog open={Boolean(deletingSchedule)} onOpenChange={(open) => !open && setDeletingSchedule(null)}>
-        <AlertDialogContent className="rounded-lg border-zinc-800 sm:max-w-lg">
+        <AlertDialogContent className="rounded-xl border-border sm:max-w-lg">
           <AlertDialogHeader>
-            <div className="mb-2 flex size-12 items-center justify-center rounded-md bg-red-950 text-red-300">
+            <div className="mb-2 flex size-12 items-center justify-center rounded-full bg-destructive/10 text-destructive">
               <Trash2 className="size-6" aria-hidden="true" />
             </div>
-            <AlertDialogTitle className="text-2xl text-white">Eliminar horario</AlertDialogTitle>
-            <AlertDialogDescription className="text-base leading-relaxed text-zinc-400">
+            <AlertDialogTitle className="text-2xl text-foreground">Eliminar horario</AlertDialogTitle>
+            <AlertDialogDescription className="text-base leading-relaxed text-muted-foreground">
               {deletingSchedule
                 ? `Se eliminará el horario de ${deletingSchedule.medicine} de las ${deletingSchedule.time}. Esta acción no se puede deshacer.`
                 : "Este horario se eliminará de la aplicación."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="mt-3">
-            <AlertDialogCancel className="h-12 border-zinc-700 px-5 text-base">Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="h-12 bg-red-700 px-5 text-base text-white hover:bg-red-800">
+            <AlertDialogCancel className="h-12 border-border px-5 text-base">Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="h-12 bg-destructive px-5 text-base text-destructive-foreground hover:bg-destructive/90">
               <Trash2 className="size-5" aria-hidden="true" />
               Sí, eliminar
             </AlertDialogAction>

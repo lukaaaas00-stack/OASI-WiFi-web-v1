@@ -21,7 +21,7 @@ export default function RootLayout({
         <ReactErrorBoundary>
           {children}
         </ReactErrorBoundary>
-        <Toaster theme="dark" />
+        <Toaster theme="light" />
         <ErrorReporter />
         <ConsoleReporter />
         <AppAnalytics />

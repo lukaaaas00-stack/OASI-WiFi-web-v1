@@ -1,4 +1,4 @@
-﻿"use client"
+"use client"
 
 import { useEffect, useState, type FormEvent } from "react"
 import { CalendarDays, Check, Clock3, Pill, Save } from "lucide-react"
@@ -70,16 +70,6 @@ export function ScheduleDialog({
     setError("")
   }
 
-  function setHour(hour: string) {
-    const minute = draft.time.split(":")[1] ?? "00"
-    setDraft((current) => ({ ...current, time: `${hour}:${minute}` }))
-  }
-
-  function setMinute(minute: string) {
-    const hour = draft.time.split(":")[0] ?? "08"
-    setDraft((current) => ({ ...current, time: `${hour}:${minute}` }))
-  }
-
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (!draft.medicine.trim() || !draft.dose.trim() || !draft.time) {
@@ -97,16 +87,14 @@ export function ScheduleDialog({
     })
   }
 
-  const [selectedHour, selectedMinute] = draft.time.split(":")
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[92dvh] overflow-y-auto rounded-lg border-zinc-800 p-0 sm:max-w-2xl">
-        <DialogHeader className="border-b border-zinc-800 px-5 py-5 text-left sm:px-7">
-          <DialogTitle className="text-2xl font-semibold text-white">
+      <DialogContent className="max-h-[92dvh] overflow-y-auto rounded-xl border-border p-0 sm:max-w-2xl">
+        <DialogHeader className="border-b border-border px-5 py-5 text-left sm:px-7">
+          <DialogTitle className="text-2xl font-semibold text-foreground">
             {schedule ? "Editar horario" : "Agregar horario"}
           </DialogTitle>
-          <DialogDescription className="text-base text-zinc-400">
+          <DialogDescription className="text-base text-muted-foreground">
             Indica cuándo debe preparar el dispensador esta medicación.
           </DialogDescription>
         </DialogHeader>
@@ -115,8 +103,8 @@ export function ScheduleDialog({
           <div className="space-y-6 px-5 py-6 sm:px-7">
             <div className="grid gap-5 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="medicine" className="flex items-center gap-2 text-base font-semibold text-zinc-200">
-                  <Pill className="size-5 text-teal-300" aria-hidden="true" />
+                <Label htmlFor="medicine" className="flex items-center gap-2 text-base font-semibold text-foreground">
+                  <Pill className="size-5 text-accent" aria-hidden="true" />
                   Medicamento
                 </Label>
                 <Input
@@ -126,13 +114,13 @@ export function ScheduleDialog({
                   placeholder="Ej.: Losartán"
                   autoComplete="off"
                   required
-                  className="h-12 border-zinc-700 bg-zinc-950 px-4 text-base focus-visible:ring-4 focus-visible:ring-teal-700/25"
+                  className="h-12 border-border bg-card px-4 text-base focus-visible:ring-4 focus-visible:ring-primary/25"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="dose" className="flex items-center gap-2 text-base font-semibold text-zinc-200">
-                  <Check className="size-5 text-teal-300" aria-hidden="true" />
+                <Label htmlFor="dose" className="flex items-center gap-2 text-base font-semibold text-foreground">
+                  <Check className="size-5 text-accent" aria-hidden="true" />
                   Dosis
                 </Label>
                 <Input
@@ -142,50 +130,54 @@ export function ScheduleDialog({
                   placeholder="Ej.: 1 comprimido de 50 mg"
                   autoComplete="off"
                   required
-                  className="h-12 border-zinc-700 bg-zinc-950 px-4 text-base focus-visible:ring-4 focus-visible:ring-teal-700/25"
+                  className="h-12 border-border bg-card px-4 text-base focus-visible:ring-4 focus-visible:ring-primary/25"
                 />
               </div>
             </div>
 
             <div className="max-w-xs space-y-2">
-              <Label className="flex items-center gap-2 text-base font-semibold text-zinc-200">
-                <Clock3 className="size-5 text-teal-300" aria-hidden="true" />
+              <Label htmlFor="time-hour" className="flex items-center gap-2 text-base font-semibold text-foreground">
+                <Clock3 className="size-5 text-accent" aria-hidden="true" />
                 Hora
               </Label>
               <div className="flex items-center gap-2">
                 <select
+                  id="time-hour"
                   aria-label="Hora"
-                  value={selectedHour}
-                  onChange={(event) => setHour(event.target.value)}
+                  value={draft.time.split(":")[0] ?? "08"}
+                  onChange={(event) => {
+                    const minute = draft.time.split(":")[1] ?? "00"
+                    setDraft((current) => ({ ...current, time: `${event.target.value}:${minute}` }))
+                  }}
                   required
-                  className="h-12 flex-1 rounded-md border border-zinc-700 bg-zinc-950 px-3 text-lg text-zinc-100 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-teal-700/25"
+                  className="h-12 flex-1 rounded-md border border-border bg-card px-3 text-lg font-mono focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/25"
                 >
                   {HOURS.map((hour) => (
-                    <option key={hour} value={hour}>
-                      {hour}
-                    </option>
+                    <option key={hour} value={hour}>{hour}</option>
                   ))}
                 </select>
-                <span className="text-lg font-semibold text-zinc-400">:</span>
+                <span className="text-lg font-semibold text-muted-foreground">:</span>
                 <select
+                  id="time-minute"
                   aria-label="Minuto"
-                  value={selectedMinute}
-                  onChange={(event) => setMinute(event.target.value)}
+                  value={draft.time.split(":")[1] ?? "00"}
+                  onChange={(event) => {
+                    const hour = draft.time.split(":")[0] ?? "08"
+                    setDraft((current) => ({ ...current, time: `${hour}:${event.target.value}` }))
+                  }}
                   required
-                  className="h-12 flex-1 rounded-md border border-zinc-700 bg-zinc-950 px-3 text-lg text-zinc-100 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-teal-700/25"
+                  className="h-12 flex-1 rounded-md border border-border bg-card px-3 text-lg font-mono focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/25"
                 >
                   {MINUTES.map((minute) => (
-                    <option key={minute} value={minute}>
-                      {minute}
-                    </option>
+                    <option key={minute} value={minute}>{minute}</option>
                   ))}
                 </select>
               </div>
             </div>
 
             <fieldset>
-              <legend className="mb-3 flex items-center gap-2 text-base font-semibold text-zinc-200">
-                <CalendarDays className="size-5 text-teal-300" aria-hidden="true" />
+              <legend className="mb-3 flex items-center gap-2 text-base font-semibold text-foreground">
+                <CalendarDays className="size-5 text-accent" aria-hidden="true" />
                 Días de la semana
               </legend>
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -195,13 +187,13 @@ export function ScheduleDialog({
                     <Label
                       key={day.id}
                       htmlFor={`day-${day.id}`}
-                      className="flex min-h-12 cursor-pointer items-center gap-3 rounded-md border border-zinc-700 bg-zinc-950 px-3 text-base font-medium text-zinc-200 has-[[data-state=checked]]:border-teal-700 has-[[data-state=checked]]:bg-teal-950/50"
+                      className="flex min-h-12 cursor-pointer items-center gap-3 rounded-md border border-border bg-card px-3 text-base font-medium text-foreground has-[[data-state=checked]]:border-primary has-[[data-state=checked]]:bg-primary/10"
                     >
                       <Checkbox
                         id={`day-${day.id}`}
                         checked={checked}
                         onCheckedChange={(value) => toggleDay(day.id, value === true)}
-                        className="size-6 border-2 border-zinc-500 data-[state=checked]:border-teal-700 data-[state=checked]:bg-teal-700 focus-visible:ring-4 focus-visible:ring-teal-700/25"
+                        className="size-6 border-2 border-border data-[state=checked]:border-primary data-[state=checked]:bg-primary focus-visible:ring-4 focus-visible:ring-primary/25"
                       />
                       {day.label}
                     </Label>
@@ -210,12 +202,12 @@ export function ScheduleDialog({
               </div>
             </fieldset>
 
-            <div className="flex min-h-16 items-center justify-between gap-4 border-y border-zinc-800 py-3">
+            <div className="flex min-h-16 items-center justify-between gap-4 border-y border-border py-3">
               <div>
-                <Label htmlFor="active" className="text-base font-semibold text-zinc-100">
+                <Label htmlFor="active" className="text-base font-semibold text-foreground">
                   Horario activo
                 </Label>
-                <p className="mt-0.5 text-sm text-zinc-400">
+                <p className="mt-0.5 text-sm text-muted-foreground">
                   {draft.active ? "El dispensador tendrá en cuenta este horario." : "Este horario quedará pausado."}
                 </p>
               </div>
@@ -223,25 +215,25 @@ export function ScheduleDialog({
                 id="active"
                 checked={draft.active}
                 onCheckedChange={(active) => setDraft((current) => ({ ...current, active }))}
-                className="scale-125 data-[state=checked]:bg-teal-700"
+                className="scale-125 data-[state=checked]:bg-primary"
               />
             </div>
 
-            <p className="min-h-6 text-base font-medium text-red-400" role="alert" aria-live="polite">
+            <p className="min-h-6 text-base font-medium text-destructive" role="alert" aria-live="polite">
               {error}
             </p>
           </div>
 
-          <DialogFooter className="border-t border-zinc-800 bg-black px-5 py-4 sm:px-7">
+          <DialogFooter className="border-t border-border bg-card px-5 py-4 sm:px-7">
             <Button
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
-              className="h-12 border-zinc-700 px-5 text-base"
+              className="h-12 border-border px-5 text-base"
             >
               Cancelar
             </Button>
-            <Button type="submit" className="h-12 bg-teal-800 px-5 text-base text-white hover:bg-teal-900">
+            <Button type="submit" className="h-12 bg-primary px-5 text-base text-primary-foreground hover:bg-primary/90">
               <Save className="size-5" aria-hidden="true" />
               Guardar horario
             </Button>

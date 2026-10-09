@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@import url('https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
 
 nextjs-portal { display: none !important; }
 
@@ -7,44 +8,44 @@ nextjs-portal { display: none !important; }
 
 :root,
 .dark {
-  --background: oklch(0.06 0 0);
-  --foreground: oklch(0.97 0 0);
-  --card: oklch(0.115 0 0);
-  --card-foreground: oklch(0.97 0 0);
-  --popover: oklch(0.13 0 0);
-  --popover-foreground: oklch(0.97 0 0);
-  --primary: oklch(0.64 0.105 184);
-  --primary-foreground: oklch(0.09 0 0);
-  --secondary: oklch(0.19 0 0);
-  --secondary-foreground: oklch(0.94 0 0);
-  --muted: oklch(0.17 0 0);
-  --muted-foreground: oklch(0.7 0 0);
-  --accent: oklch(0.22 0.025 184);
-  --accent-foreground: oklch(0.9 0.045 184);
-  --destructive: oklch(0.58 0.19 27);
-  --destructive-foreground: oklch(0.98 0 0);
-  --border: oklch(0.25 0 0);
-  --input: oklch(0.3 0 0);
-  --ring: oklch(0.67 0.1 184);
-  --chart-1: oklch(0.7 0.16 50);
-  --chart-2: oklch(0.67 0.11 184);
-  --chart-3: oklch(0.72 0.12 240);
-  --chart-4: oklch(0.75 0.15 90);
-  --chart-5: oklch(0.65 0.18 25);
-  --radius: 0.5rem;
-  --sidebar: oklch(0.08 0 0);
-  --sidebar-foreground: oklch(0.96 0 0);
-  --sidebar-primary: oklch(0.64 0.105 184);
-  --sidebar-primary-foreground: oklch(0.09 0 0);
-  --sidebar-accent: oklch(0.18 0 0);
-  --sidebar-accent-foreground: oklch(0.96 0 0);
-  --sidebar-border: oklch(0.23 0 0);
-  --sidebar-ring: oklch(0.67 0.1 184);
+  --background: #F1ECE0;
+  --foreground: #1D2624;
+  --card: #FBF8F1;
+  --card-foreground: #1D2624;
+  --popover: #FBF8F1;
+  --popover-foreground: #1D2624;
+  --primary: #204E4F;
+  --primary-foreground: #F1ECE0;
+  --secondary: #E4DFD0;
+  --secondary-foreground: #2C3532;
+  --muted: #E7E1D2;
+  --muted-foreground: #6E6656;
+  --accent: #C1623D;
+  --accent-foreground: #FBF8F1;
+  --destructive: #A6402C;
+  --destructive-foreground: #FBF8F1;
+  --border: #DAD2BC;
+  --input: #D6CDB4;
+  --ring: #204E4F;
+  --chart-1: #C1623D;
+  --chart-2: #204E4F;
+  --chart-3: #7A8B72;
+  --chart-4: #C9A24A;
+  --chart-5: #8C5A44;
+  --radius: 0.65rem;
+  --sidebar: #EAE4D6;
+  --sidebar-foreground: #1D2624;
+  --sidebar-primary: #204E4F;
+  --sidebar-primary-foreground: #F1ECE0;
+  --sidebar-accent: #DCD5C2;
+  --sidebar-accent-foreground: #1D2624;
+  --sidebar-border: #D6CDB4;
+  --sidebar-ring: #204E4F;
 }
 
 @theme inline {
-  --font-sans: 'Geist', ui-sans-serif, system-ui, sans-serif;
-  --font-mono: 'Geist Mono', ui-monospace, monospace;
+  --font-sans: 'Work Sans', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -89,7 +90,7 @@ nextjs-portal { display: none !important; }
   }
   body {
     @apply bg-background text-foreground;
-    color-scheme: dark;
+    color-scheme: light;
     letter-spacing: 0;
   }
   button,
@@ -100,7 +101,10 @@ nextjs-portal { display: none !important; }
     @apply focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring/30;
   }
   input[type="time"]::-webkit-calendar-picker-indicator {
-    filter: invert(1);
-    opacity: 0.75;
+    opacity: 0.6;
+  }
+  .tabular-nums,
+  .font-mono {
+    font-variant-numeric: tabular-nums;
   }
 }
