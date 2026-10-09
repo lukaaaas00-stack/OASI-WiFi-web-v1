@@ -30,14 +30,24 @@ export function AddByVoice({ onAdd }: { onAdd: (drafts: ScheduleDraft[]) => void
       return
     }
     const recognition = new SpeechRecognitionClass()
-    recognition.lang = "es-PY"
+    recognition.lang = "es-AR"
+    recognition.continuous = true
     recognition.interimResults = false
     recognition.maxAlternatives = 1
     recognition.onresult = (event: any) => {
       const transcript = event.results[0]?.[0]?.transcript ?? ""
       setText((current) => (current.trim() ? `${current.trim()} ${transcript}` : transcript))
     }
-    recognition.onerror = () => setListening(false)
+    recognition.onerror = (event: any) => {
+      setListening(false)
+      const messages: Record<string, string> = {
+        "not-allowed": "El navegador bloqueó el micrófono. Permití el micrófono para este sitio e intentá de nuevo.",
+        "no-speech": "No se detectó voz. Acercate al micrófono e intentá de nuevo.",
+        "audio-capture": "No se encontró un micrófono disponible en este dispositivo.",
+        network: "El reconocimiento de voz necesita conexión a Internet.",
+      }
+      setError(messages[event.error] ?? "No se pudo iniciar el dictado por voz. Podés escribir el horario.")
+    }
     recognition.onend = () => setListening(false)
     recognitionRef.current = recognition
   }, [])

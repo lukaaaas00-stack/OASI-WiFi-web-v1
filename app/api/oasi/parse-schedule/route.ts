@@ -4,6 +4,15 @@ import { WEEK_DAYS } from "@/lib/medications"
 export const dynamic = "force-dynamic"
 
 const DAY_IDS = WEEK_DAYS.map((day) => day.id)
+type DayId = (typeof DAY_IDS)[number]
+
+type ParsedSchedule = {
+  medicine: string
+  dose: string
+  time: string
+  days: DayId[]
+  active: true
+}
 
 // Variables de entorno (Vercel → Settings → Environment Variables):
 //   GEMINI_API_KEY  (obligatoria; también se aceptan GOOGLE_API_KEY, GOOGLE_GENERATIVE_AI_API_KEY y GOOGLE_AI_API_KEY)
@@ -24,6 +33,88 @@ Reglas:
 - "active" siempre debe ser true.
 - Si el texto no tiene información suficiente para armar ni un horario (no dice hora ni medicamento), devolvé {"schedules":[]}.`
 
+function daysFromText(text: string): DayId[] {
+  const normalized = text.toLocaleLowerCase("es-AR").normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+  if (/todos los dias|diario|cada dia/.test(normalized)) return [...DAY_IDS]
+  if (/entre semana|dias de semana/.test(normalized)) return ["lunes", "martes", "miercoles", "jueves", "viernes"]
+  if (/fin de semana/.test(normalized)) return ["sabado", "domingo"]
+
+  const named = DAY_IDS.filter((day) => new RegExp(`\\b${day}\\b`).test(normalized))
+  if (named.length > 0) return named
+
+  // "Hoy" representa una toma para el dia actual de Argentina.
+  if (/\bhoy\b/.test(normalized)) {
+    const weekday = new Intl.DateTimeFormat("es-AR", {
+      timeZone: "America/Argentina/Buenos_Aires",
+      weekday: "long",
+    })
+      .format(new Date())
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "") as DayId
+    return DAY_IDS.includes(weekday) ? [weekday] : [...DAY_IDS]
+  }
+  return [...DAY_IDS]
+}
+
+function parseTime(text: string): string | null {
+  const numeric = text.match(/(?:a\s+las?|a\s+la)?\s*(\d{1,2})\s*[:.]\s*(\d{2})\b/i)
+  if (numeric) {
+    let hour = Number(numeric[1])
+    const minute = Number(numeric[2])
+    const normalized = text.toLocaleLowerCase("es-AR")
+    if (/de la tarde|de la noche|pm/.test(normalized) && hour < 12) hour += 12
+    if (/de la manana|am/.test(normalized) && hour === 12) hour = 0
+    if (hour <= 23 && minute <= 59) return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`
+  }
+
+  const wholeHour = text.match(/(?:a\s+las?|a\s+la)\s*(\d{1,2})(?:\s*(?:en punto|horas?))?\b/i)
+  if (!wholeHour) return null
+  let hour = Number(wholeHour[1])
+  const normalized = text.toLocaleLowerCase("es-AR")
+  if (/de la tarde|de la noche|pm/.test(normalized) && hour < 12) hour += 12
+  if (/de la manana|am/.test(normalized) && hour === 12) hour = 0
+  return hour <= 23 ? `${String(hour).padStart(2, "0")}:00` : null
+}
+
+// Respaldo sin servicio externo. Cubre frases comunes como:
+// "Hoy tomar ibuprofeno a las 10:35, un comprimido".
+function parseLocally(text: string): ParsedSchedule[] {
+  const time = parseTime(text)
+  if (!time) return []
+  const medicineMatch = text.match(/(?:tomar|tome|medicamento(?:\s+es)?)\s+(.+?)(?=\s+(?:a\s+las?|a\s+la)\s+\d|\s*,|$)/i)
+  const fallbackMedicine = text
+    .replace(/(?:hoy|manana|todos los dias|diario|recordatorio|alarma|para|tomar|tome|a\s+las?|a\s+la|\d{1,2}[:.]\d{2}|\d{1,2}\s*(?:am|pm)|un(?:a)?\s+(?:comprimido|pastilla|capsula|dosis)|\d+\s+(?:comprimidos?|pastillas?|capsulas?|dosis))/gi, " ")
+    .replace(/[,.;]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+  const medicine = (medicineMatch?.[1] ?? fallbackMedicine).trim()
+  if (!medicine) return []
+
+  const doseMatch = text.match(/\b(?:un(?:a)?|dos|tres|cuatro|\d+)\s+(?:comprimidos?|pastillas?|capsulas?|dosis|gotas?|ml)\b/i)
+  return [{
+    medicine: medicine.replace(/\s+/g, " "),
+    dose: doseMatch?.[0] ?? "1 dosis",
+    time,
+    days: daysFromText(text),
+    active: true,
+  }]
+}
+
+function responseFromSchedules(schedules: unknown[]) {
+  const valid = schedules
+    .filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === "object")
+    .map((item) => ({
+      medicine: typeof item.medicine === "string" ? item.medicine : "",
+      dose: typeof item.dose === "string" && item.dose.trim() ? item.dose : "1 dosis",
+      time: typeof item.time === "string" && /^\d{2}:\d{2}$/.test(item.time) ? item.time : "08:00",
+      days: Array.isArray(item.days) ? item.days.filter((day) => DAY_IDS.includes(day as DayId)) : [],
+      active: true as const,
+    }))
+    .map((item) => ({ ...item, days: item.days.length > 0 ? item.days : [...DAY_IDS] }))
+    .filter((item) => item.medicine.trim().length > 0)
+  return NextResponse.json({ schedules: valid })
+}
+
 export async function POST(request: Request) {
   const body = await request.json().catch(() => null)
   const text = typeof body?.text === "string" ? body.text.trim().slice(0, 1500) : ""
@@ -37,12 +128,9 @@ export async function POST(request: Request) {
     process.env.GOOGLE_API_KEY ||
     process.env.GOOGLE_GENERATIVE_AI_API_KEY ||
     process.env.GOOGLE_AI_API_KEY
-  if (!apiKey) {
-    return NextResponse.json(
-      { error: "Falta configurar GEMINI_API_KEY en las variables de entorno del proyecto." },
-      { status: 500 }
-    )
-  }
+  // La clave es opcional: si no existe, el analizador local permite que la
+  // función siga siendo útil en Vercel, incluso sin cuota de Gemini.
+  if (!apiKey) return responseFromSchedules(parseLocally(text))
   const model = process.env.GEMINI_MODEL || DEFAULT_MODEL
 
   try {
@@ -62,13 +150,11 @@ export async function POST(request: Request) {
     if (!response.ok) {
       const detail = await response.text().catch(() => "")
       console.error("Gemini error", response.status, detail.slice(0, 500))
-      const hint =
-        response.status === 400 || response.status === 403
-          ? "Revisá que la clave GEMINI_API_KEY sea válida."
-          : response.status === 404
-            ? "El modelo no existe: probá definir GEMINI_MODEL (por ejemplo gemini-2.5-flash)."
-            : "Probá de nuevo en un momento."
-      return NextResponse.json({ error: `No se pudo analizar el texto (código ${response.status}). ${hint}` }, { status: 502 })
+      // No bloquear la creación de un horario si Gemini está sin cuota,
+      // temporalmente caído o con un modelo no disponible.
+      const local = parseLocally(text)
+      if (local.length > 0) return responseFromSchedules(local)
+      return NextResponse.json({ error: `No se pudo analizar el texto (código ${response.status}). Indicá medicamento y hora, por ejemplo: “Ibuprofeno a las 10:35, un comprimido”.` }, { status: 502 })
     }
 
     const data = await response.json()
@@ -86,23 +172,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "No se pudo interpretar la respuesta del análisis." }, { status: 502 })
     }
 
-    const schedules = Array.isArray(parsed.schedules)
-      ? parsed.schedules
-          .filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === "object")
-          .map((item) => ({
-            medicine: typeof item.medicine === "string" ? item.medicine : "",
-            dose: typeof item.dose === "string" && item.dose.trim() ? item.dose : "1 dosis",
-            time: typeof item.time === "string" && /^\d{2}:\d{2}$/.test(item.time) ? item.time : "08:00",
-            days: Array.isArray(item.days) ? item.days.filter((d) => DAY_IDS.includes(d as string)) : [],
-            active: true,
-          }))
-          .map((item) => ({ ...item, days: item.days.length > 0 ? item.days : DAY_IDS }))
-          .filter((item) => item.medicine.trim().length > 0)
-      : []
-
-    return NextResponse.json({ schedules })
+    return responseFromSchedules(Array.isArray(parsed.schedules) ? parsed.schedules : [])
   } catch (error) {
     console.error("parse-schedule falló", error)
-    return NextResponse.json({ error: "No se pudo completar el análisis. Probá de nuevo." }, { status: 502 })
+    const local = parseLocally(text)
+    if (local.length > 0) return responseFromSchedules(local)
+    return NextResponse.json({ error: "No se pudo completar el análisis. Indicá medicamento y hora." }, { status: 502 })
   }
 }
