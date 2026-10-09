@@ -161,7 +161,6 @@ function ScheduleItem({
 
         <div className="min-w-0 flex-1 border-border sm:border-l sm:pl-5">
           <h3 className="break-words text-lg font-semibold text-foreground">{schedule.medicine}</h3>
-          <p className="mt-1 break-words text-base text-muted-foreground">{schedule.dose}</p>
           <p className="mt-2 flex items-center gap-2 text-sm font-medium text-muted-foreground">
             <CalendarClock className="size-4 shrink-0" aria-hidden="true" />
             {formatDays(schedule.days)}
@@ -210,7 +209,6 @@ function TodayItem({ schedule }: { schedule: MedicationSchedule }) {
       </div>
       <div className="min-w-0 flex-1">
         <h3 className="break-words text-lg font-semibold text-foreground">{schedule.medicine}</h3>
-        <p className="break-words text-base text-muted-foreground">{schedule.dose}</p>
       </div>
       <CheckCircle2 className="hidden size-6 shrink-0 text-[#4A6E44] sm:block" aria-label="Horario activo" />
     </article>
@@ -464,7 +462,6 @@ export default function OasiApp({ userMenu }: { userMenu: ReactNode }) {
                 {nextDose ? (
                   <>
                     <p className="mt-3 text-2xl font-bold sm:text-3xl">{nextDose.schedule.medicine}</p>
-                    <p className="mt-2 text-lg text-primary-foreground/85">{nextDose.schedule.dose}</p>
                     <p className="mt-5 flex items-center gap-2 font-mono text-xl font-semibold tabular-nums">
                       <Clock3 className="size-6" aria-hidden="true" />
                       {formatNextDate(nextDose.date, now)}

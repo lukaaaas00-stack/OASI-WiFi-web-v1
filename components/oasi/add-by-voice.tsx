@@ -92,7 +92,7 @@ export function AddByVoice({ onAdd }: { onAdd: (drafts: ScheduleDraft[]) => void
     }
   }
 
-  function updateDraft(index: number, field: "medicine" | "dose" | "time", value: string) {
+  function updateDraft(index: number, field: "medicine" | "time", value: string) {
     setDrafts((current) => current.map((draft, i) => (i === index ? { ...draft, [field]: value } : draft)))
   }
 
@@ -123,7 +123,7 @@ export function AddByVoice({ onAdd }: { onAdd: (drafts: ScheduleDraft[]) => void
         <h1 id="add-voice-title" className="mt-1 text-3xl font-bold text-foreground sm:text-4xl">Agregar por voz o texto</h1>
         <p className="mt-2 max-w-2xl text-base text-muted-foreground">
           Describí con tus palabras uno o varios horarios, escribiendo o dictando por voz. Por ejemplo:
-          «una alarma a las 2 de la tarde para tomar Losartán, 1 comprimido».
+          «una alarma a las 2 de la tarde para tomar Losartán».
         </p>
       </section>
 
@@ -186,22 +186,13 @@ export function AddByVoice({ onAdd }: { onAdd: (drafts: ScheduleDraft[]) => void
 
           {drafts.map((draft, index) => (
             <article key={index} className="rounded-xl border border-border bg-card p-4 shadow-sm sm:p-5">
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div className="max-w-md">
                 <div className="space-y-1.5">
                   <Label htmlFor={`draft-medicine-${index}`} className="text-sm font-semibold text-foreground">Medicamento</Label>
                   <Input
                     id={`draft-medicine-${index}`}
                     value={draft.medicine}
                     onChange={(event) => updateDraft(index, "medicine", event.target.value)}
-                    className="h-11 border-border bg-background px-3 text-base focus-visible:ring-4 focus-visible:ring-primary/25"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor={`draft-dose-${index}`} className="text-sm font-semibold text-foreground">Dosis</Label>
-                  <Input
-                    id={`draft-dose-${index}`}
-                    value={draft.dose}
-                    onChange={(event) => updateDraft(index, "dose", event.target.value)}
                     className="h-11 border-border bg-background px-3 text-base focus-visible:ring-4 focus-visible:ring-primary/25"
                   />
                 </div>

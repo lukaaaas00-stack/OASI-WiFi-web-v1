@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState, type FormEvent } from "react"
-import { CalendarDays, Check, Clock3, Pill, Save } from "lucide-react"
+import { CalendarDays, Clock3, Pill, Save } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
@@ -72,8 +72,8 @@ export function ScheduleDialog({
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (!draft.medicine.trim() || !draft.dose.trim() || !draft.time) {
-      setError("Completa el medicamento, la dosis y la hora.")
+    if (!draft.medicine.trim() || !draft.time) {
+      setError("Completa el medicamento y la hora.")
       return
     }
     if (draft.days.length === 0) {
@@ -83,7 +83,8 @@ export function ScheduleDialog({
     onSave({
       ...draft,
       medicine: draft.medicine.trim(),
-      dose: draft.dose.trim(),
+      // Se conserva vacío solo por compatibilidad con horarios anteriores.
+      dose: "",
     })
   }
 
@@ -101,7 +102,7 @@ export function ScheduleDialog({
 
         <form onSubmit={handleSubmit}>
           <div className="space-y-6 px-5 py-6 sm:px-7">
-            <div className="grid gap-5 sm:grid-cols-2">
+            <div className="max-w-md">
               <div className="space-y-2">
                 <Label htmlFor="medicine" className="flex items-center gap-2 text-base font-semibold text-foreground">
                   <Pill className="size-5 text-accent" aria-hidden="true" />
@@ -118,21 +119,6 @@ export function ScheduleDialog({
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="dose" className="flex items-center gap-2 text-base font-semibold text-foreground">
-                  <Check className="size-5 text-accent" aria-hidden="true" />
-                  Dosis
-                </Label>
-                <Input
-                  id="dose"
-                  value={draft.dose}
-                  onChange={(event) => setDraft((current) => ({ ...current, dose: event.target.value }))}
-                  placeholder="Ej.: 1 comprimido de 50 mg"
-                  autoComplete="off"
-                  required
-                  className="h-12 border-border bg-card px-4 text-base focus-visible:ring-4 focus-visible:ring-primary/25"
-                />
-              </div>
             </div>
 
             <div className="max-w-xs space-y-2">

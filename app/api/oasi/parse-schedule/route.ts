@@ -22,14 +22,13 @@ const DEFAULT_MODEL = "gemini-flash-latest"
 const SYSTEM_PROMPT = `Convertís descripciones en español (escritas o dictadas por voz) de horarios de medicación en datos estructurados para un dispensador automático.
 
 Devolvé EXCLUSIVAMENTE un JSON válido, sin texto adicional, sin explicación, sin markdown, con esta forma exacta:
-{"schedules":[{"medicine":"string","dose":"string","time":"HH:MM en 24 horas","days":["lunes"|"martes"|"miercoles"|"jueves"|"viernes"|"sabado"|"domingo"],"active":true}]}
+{"schedules":[{"medicine":"string","time":"HH:MM en 24 horas","days":["lunes"|"martes"|"miercoles"|"jueves"|"viernes"|"sabado"|"domingo"],"active":true}]}
 
 Reglas:
 - Si el texto describe más de un horario (varias medicaciones o varias horas), devolvé varios elementos en "schedules".
 - "time" siempre en formato de 24 horas "HH:MM". Si dice "las dos" sin aclarar, asumí de la tarde (14:00) salvo que el contexto indique claramente la mañana. "mediodía"=12:00, "medianoche"=00:00, "en la mañana"=08:00, "en la tarde"=15:00, "en la noche"=21:00. Interpretá también horas en lenguaje natural ("2 de la tarde"="14:00", "8 y media de la mañana"="08:30").
 - "days" es un array con cualquier combinación de estos identificadores, en minúscula y sin tildes: ${DAY_IDS.join(", ")}. Si no especifica días, o dice "todos los días"/"diario", devolvé los 7. Si dice "entre semana"/"días de semana", devolvé lunes a viernes. Si dice "fin de semana", sabado y domingo.
 - "medicine" es el nombre del medicamento tal como lo escribió el usuario (corregí errores de tipeo obvios, no inventes nombres).
-- "dose" es la dosis o cantidad como la describió el usuario (ej: "1 comprimido de 50 mg"). Si no la menciona, usá "1 dosis".
 - "active" siempre debe ser true.
 - Si el texto no tiene información suficiente para armar ni un horario (no dice hora ni medicamento), devolvé {"schedules":[]}.`
 
@@ -77,7 +76,7 @@ function parseTime(text: string): string | null {
 }
 
 // Respaldo sin servicio externo. Cubre frases comunes como:
-// "Hoy tomar ibuprofeno a las 10:35, un comprimido".
+// "Hoy tomar ibuprofeno a las 10:35".
 function parseLocally(text: string): ParsedSchedule[] {
   const time = parseTime(text)
   if (!time) return []
@@ -90,10 +89,9 @@ function parseLocally(text: string): ParsedSchedule[] {
   const medicine = (medicineMatch?.[1] ?? fallbackMedicine).trim()
   if (!medicine) return []
 
-  const doseMatch = text.match(/\b(?:un(?:a)?|dos|tres|cuatro|\d+)\s+(?:comprimidos?|pastillas?|capsulas?|dosis|gotas?|ml)\b/i)
   return [{
     medicine: medicine.replace(/\s+/g, " "),
-    dose: doseMatch?.[0] ?? "1 dosis",
+    dose: "",
     time,
     days: daysFromText(text),
     active: true,
@@ -105,7 +103,8 @@ function responseFromSchedules(schedules: unknown[]) {
     .filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === "object")
     .map((item) => ({
       medicine: typeof item.medicine === "string" ? item.medicine : "",
-      dose: typeof item.dose === "string" && item.dose.trim() ? item.dose : "1 dosis",
+      // Campo interno vacío para que los horarios ya guardados sigan siendo compatibles.
+      dose: "",
       time: typeof item.time === "string" && /^\d{2}:\d{2}$/.test(item.time) ? item.time : "08:00",
       days: Array.isArray(item.days) ? item.days.filter((day) => DAY_IDS.includes(day as DayId)) : [],
       active: true as const,
@@ -154,7 +153,7 @@ export async function POST(request: Request) {
       // temporalmente caído o con un modelo no disponible.
       const local = parseLocally(text)
       if (local.length > 0) return responseFromSchedules(local)
-      return NextResponse.json({ error: `No se pudo analizar el texto (código ${response.status}). Indicá medicamento y hora, por ejemplo: “Ibuprofeno a las 10:35, un comprimido”.` }, { status: 502 })
+      return NextResponse.json({ error: `No se pudo analizar el texto (código ${response.status}). Indicá medicamento y hora, por ejemplo: “Ibuprofeno a las 10:35”.` }, { status: 502 })
     }
 
     const data = await response.json()

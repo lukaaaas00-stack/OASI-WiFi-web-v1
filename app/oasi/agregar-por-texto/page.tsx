@@ -101,7 +101,7 @@ export default function AgregarPorTextoPage() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || "No se pudo analizar el texto.")
       if (!data.schedules || data.schedules.length === 0) {
-        setError("No se encontró ningún horario en ese texto. Probá ser más específico (medicamento, dosis y hora).")
+        setError("No se encontró ningún horario en ese texto. Probá indicar medicamento y hora.")
         return
       }
       setDrafts(data.schedules)
@@ -112,7 +112,7 @@ export default function AgregarPorTextoPage() {
     }
   }
 
-  function updateDraft(index: number, field: keyof DraftSchedule, value: string) {
+  function updateDraft(index: number, field: "medicine" | "time", value: string) {
     setDrafts((current) =>
       current.map((draft, i) => (i === index ? { ...draft, [field]: value } : draft))
     )
@@ -155,7 +155,7 @@ export default function AgregarPorTextoPage() {
       <h1 style={{ fontSize: 20, marginBottom: 8 }}>Agregar horario por texto o voz</h1>
       <p style={{ fontSize: 14, color: "#555", marginBottom: 20 }}>
         Describí con tus palabras uno o varios horarios, escribiendo o tocando el micrófono. Por ejemplo:
-        &quot;una alarma a las 2 de la tarde para tomar Losartán, 1 comprimido&quot;.
+        &quot;una alarma a las 2 de la tarde para tomar Losartán&quot;.
       </p>
 
       <div style={{ position: "relative", marginBottom: 12 }}>
@@ -266,13 +266,6 @@ export default function AgregarPorTextoPage() {
                 value={draft.medicine}
                 onChange={(e) => updateDraft(index, "medicine", e.target.value)}
                 placeholder="Medicamento"
-                style={{ width: "100%", padding: 8, marginBottom: 6, borderRadius: 6, border: "1px solid #ccc", boxSizing: "border-box" }}
-              />
-              <input
-                type="text"
-                value={draft.dose}
-                onChange={(e) => updateDraft(index, "dose", e.target.value)}
-                placeholder="Dosis"
                 style={{ width: "100%", padding: 8, marginBottom: 6, borderRadius: 6, border: "1px solid #ccc", boxSizing: "border-box" }}
               />
               <input
