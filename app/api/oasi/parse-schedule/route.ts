@@ -133,18 +133,29 @@ export async function POST(request: Request) {
   const model = process.env.GEMINI_MODEL || DEFAULT_MODEL
 
   try {
-    const response = await fetch(
+    // Gemini puede quedarse esperando indefinidamente por una red lenta o un
+    // servicio sin respuesta. Cortamos a los 12 s para que el respaldo local
+    // siga creando el horario en vez de dejar la web en "Analizando...".
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 12000)
+    let response: Response
+    try {
+      response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
       {
         method: "POST",
         headers: { "content-type": "application/json", "x-goog-api-key": apiKey },
+        signal: controller.signal,
         body: JSON.stringify({
           systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
           contents: [{ role: "user", parts: [{ text }] }],
           generationConfig: { responseMimeType: "application/json", temperature: 0 },
         }),
       }
-    )
+      )
+    } finally {
+      clearTimeout(timeout)
+    }
 
     if (!response.ok) {
       const detail = await response.text().catch(() => "")
@@ -171,7 +182,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "No se pudo interpretar la respuesta del análisis." }, { status: 502 })
     }
 
-    return responseFromSchedules(Array.isArray(parsed.schedules) ? parsed.schedules : [])
+    const schedules = Array.isArray(parsed.schedules) ? parsed.schedules : []
+    // Si la IA responde pero no encuentra un horario, intentamos igualmente
+    // el analizador local para frases simples como "Losartan a las 08:00".
+    if (schedules.length === 0) {
+      const local = parseLocally(text)
+      if (local.length > 0) return responseFromSchedules(local)
+    }
+    return responseFromSchedules(schedules)
   } catch (error) {
     console.error("parse-schedule falló", error)
     const local = parseLocally(text)
